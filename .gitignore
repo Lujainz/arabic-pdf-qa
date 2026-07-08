@@ -1,0 +1,19 @@
+# Environment variables (contains real API keys)
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# ChromaDB local storage (regenerated from PDFs, don't commit)
+chroma_db/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Uploaded test PDFs (optional — skip if you want to keep sample docs)
+*.pdf
