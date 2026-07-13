@@ -22,7 +22,7 @@ def store_chunks(chunks: list[dict], filename: str) -> int:
     Returns the number of chunks stored.
     Each chunk gets a unique ID, its embedding, text, and metadata.
     """
-    collection_name = _sanitize_collection_name(filename)
+    collection_name = sanitize_collection_name(filename)
     collection = get_or_create_collection(collection_name)
 
     ids = [f"{collection_name}_chunk_{chunk['chunk_index']}" for chunk in chunks]
@@ -71,7 +71,7 @@ def query_collection(collection_name: str, query_embedding: list[float], top_k: 
     return chunks
 
 
-def _sanitize_collection_name(filename: str) -> str:
+def sanitize_collection_name(filename: str) -> str:
     """
     ChromaDB collection names must be alphanumeric + hyphens, 3–63 chars.
     Strip the extension and replace unsafe characters.

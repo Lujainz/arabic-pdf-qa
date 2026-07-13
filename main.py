@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers.upload import router as upload_router
+from routers.query import router as query_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(upload_router, prefix="/api")
+app.include_router(query_router, prefix="/api")
 
 
 @app.get("/health")

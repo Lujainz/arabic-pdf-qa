@@ -5,5 +5,7 @@ langchain
 langchain-text-splitters
 openai
 chromadb
+anthropic
 python-dotenv
 python-multipart
+pydantic-settings
