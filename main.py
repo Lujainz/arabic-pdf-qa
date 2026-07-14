@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers.upload import router as upload_router
 from routers.query import router as query_router
+from core.config import settings
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,7 +19,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # update to your frontend URL at deploy
+    allow_origins=[settings.allowed_origin],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

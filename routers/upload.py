@@ -2,10 +2,11 @@ import logging
 from fastapi import APIRouter, UploadFile, File, Header, HTTPException
 
 from core.config import settings
+from core.models import UploadResponse
 from services.pdf_extractor import extract_text_from_pdf
 from services.chunker import chunk_pages
 from services.embedder import embed_chunks
-from services.vector_store import store_chunks
+from services.vector_store import store_chunks, sanitize_collection_name
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -13,7 +14,7 @@ router = APIRouter()
 MAX_FILE_SIZE_BYTES = settings.max_file_size_mb * 1024 * 1024
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=UploadResponse)
 async def upload_pdf(
     file: UploadFile = File(...),
     x_api_key: str = Header(...),
@@ -54,9 +55,10 @@ async def upload_pdf(
     stored_count = store_chunks(chunks, file.filename)
     logger.info(f"Stored {stored_count} chunks in ChromaDB for '{file.filename}'.")
 
-    return {
-        "message": "PDF processed successfully.",
-        "filename": file.filename,
-        "pages_extracted": len(pages),
-        "chunks_stored": stored_count,
-    }
+    return UploadResponse(
+        message="PDF processed successfully.",
+        filename=file.filename,
+        collection_id=sanitize_collection_name(file.filename),
+        pages_extracted=len(pages),
+        chunks_stored=stored_count,
+    )

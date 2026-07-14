@@ -3,10 +3,10 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from core.config import settings
+from core.models import QueryResponse, SourceChunk, UsageInfo
 from services.retriever import retrieve_relevant_chunks
 from services.prompt_builder import build_prompt
 from services.generator import generate_answer, NO_CONTEXT_MESSAGE
-from services.vector_store import sanitize_collection_name
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -14,10 +14,10 @@ router = APIRouter()
 
 class QueryRequest(BaseModel):
     question: str
-    filename: str  # the originally uploaded PDF filename, used to find its collection
+    collection_id: str      # returned by /upload — no need to remember the filename
 
 
-@router.post("/query")
+@router.post("/query", response_model=QueryResponse)
 async def query_pdf(
     request: QueryRequest,
     x_api_key: str = Header(...),
@@ -29,18 +29,17 @@ async def query_pdf(
     if not request.question.strip():
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
 
-    collection_name = sanitize_collection_name(request.filename)
-
     # Step 1: Retrieve relevant chunks
-    chunks = retrieve_relevant_chunks(request.question, collection_name)
+    chunks = retrieve_relevant_chunks(request.question, request.collection_id)
     logger.info(f"Retrieved {len(chunks)} relevant chunks above similarity threshold.")
 
     # Step 2: Graceful fallback if nothing relevant found
     if not chunks:
-        return {
-            "answer": NO_CONTEXT_MESSAGE,
-            "sources": [],
-        }
+        return QueryResponse(
+            answer=NO_CONTEXT_MESSAGE,
+            sources=[],
+            usage=None,
+        )
 
     # Step 3: Build the Arabic prompt
     prompt = build_prompt(request.question, chunks)
@@ -49,20 +48,20 @@ async def query_pdf(
     result = generate_answer(prompt)
 
     # Step 5: Return answer + sources + token usage
-    return {
-        "answer": result["answer"],
-        "sources": [
-            {
-                "filename": chunk["filename"],
-                "page": chunk["page_number"],
-                "similarity": chunk["similarity"],
-                "chunk_text": chunk["text"][:200],  # preview only
-            }
+    return QueryResponse(
+        answer=result["answer"],
+        sources=[
+            SourceChunk(
+                filename=chunk["filename"],
+                page=chunk["page_number"],
+                similarity=chunk["similarity"],
+                chunk_text=chunk["text"][:200],
+            )
             for chunk in chunks
         ],
-        "usage": {
-            "input_tokens": result["input_tokens"],
-            "output_tokens": result["output_tokens"],
-            "estimated_cost_usd": result["estimated_cost_usd"],
-        },
-    }
+        usage=UsageInfo(
+            input_tokens=result["input_tokens"],
+            output_tokens=result["output_tokens"],
+            estimated_cost_usd=result["estimated_cost_usd"],
+        ),
+    )
